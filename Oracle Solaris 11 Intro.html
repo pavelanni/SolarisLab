@@ -2,10 +2,10 @@
 <html>
 <head>
 <title>Introduction to Solaris 11</title>
-<meta name="generator" content="Bluefish 2.0.2" >
+<meta name="generator" content="Bluefish 2.0.3" >
 <meta name="author" content="Pavel Anni" >
-<meta name="date" content="2011-12-19T17:25:01-0500" >
-<meta name="copyright" content="">
+<meta name="date" content="2012-01-06T16:15:17-0500" >
+<meta name="copyright" content="Oracle Corporation, 2011">
 <meta name="keywords" content="">
 <meta name="description" content="">
 <meta name="ROBOTS" content="NOINDEX, NOFOLLOW">
@@ -80,7 +80,8 @@ border-collapse:collapse;
 Use your OSC instructions. You will be provided with IP addresses, access instructions and login credentials by your OSC instructor.</p> <h3>Using Your Machine</h3> <p>If you're performing this lab on your own machine, we've provided a VirtualBox appliance that contains 
 all the software and configuration necessary to complete this lab. 
 All you need is VirtualBox and a modern (with a CPU supporting virtualization, AMD-V or VT-x) laptop/desktop with at least 3 GB of RAM. </p><ul>
-<li>Download and install the latest version of VirtualBox (http://www.virtualbox.org/wiki/Downloads). </li><li>Download or find on the provided DVD and import the Hands On Lab machine into VirtualBox (File > Import Appliance). You will have
+<li>Download and install the latest version of VirtualBox for your platform (http://www.virtualbox.org/wiki/Downloads). </li>
+<li>Download and install the latest version of VirtualBox Extensions Pack (http://www.virtualbox.org/wiki/Downloads).</li><li>Download or find on the provided DVD and import the Hands On Lab machine into VirtualBox (File > Import Appliance). You will have
 to accept the OTN Oracle Solaris license to use the appliance. </li></ul>
 
 <p>The Hands On Lab virtual appliance contains the following: </p><ul>
@@ -140,10 +141,7 @@ config:
 	  c3t0d0s0  ONLINE       0     0     0
 
 errors: No known data errors</pre><p>Let's now create our own ZFS pool. What do we need for that? Just several disks and one command. 
-Check your /dev/dsk directory; we've created there several files that act as disks in our lab: </p><pre>root@solaris:~# <kbd>ls /dev/dsk/disk*</kbd> /dev/dsk/disk0 /dev/dsk/disk2 /dev/dsk/disk4 /dev/dsk/disk6 /dev/dsk/disk8 /dev/dsk/disk1 /dev/dsk/disk3 /dev/dsk/disk5 /dev/dsk/disk7 /dev/dsk/disk9 </pre>
-
-<p>If the files are not there (e.g. you are running this lab on your own Solaris 11 installation) then create them:</p>
-<pre>
+We will create several files in /dev/dsk directory; they will act as disks in our lab: </p><pre>root@solaris:~# <kbd>cd /dev/dsk</kbd> 
 root@solaris:~# <kbd>mkfile 200m disk0 disk1 disk2 disk3 disk4 disk5 disk6 disk7 disk8 disk9</kbd>
 </pre>
 <p>We'll take four disks and create a ZFS pool with RAID-Z protection: </p><pre>root@solaris:~# <kbd>zpool create labpool raidz disk0 disk1 disk2 disk3 </kbd></pre><p>That was easy, wasn't it? And fast, too! Check our ZFS pools again: </p><pre>root@solaris:~# <kbd>zpool list</kbd> NAME      SIZE  ALLOC   FREE  CAP  DEDUP  HEALTH  ALTROOT
@@ -191,9 +189,9 @@ directory.
 <pre>
 root@solaris:~# <kbd>zfs set quota=200m rpool/export/home/joe</kbd>
 </pre>
-<p>Now change user to "<code>joe</code>" and check how much space you can use: </p><pre>root@solaris:# <kbd>su - joe </kbd>joe@solaris$ <kbd>mkfile 100m file1</kbd> joe@solaris$ <kbd>mkfile 100m file2 </kbd></pre><p>First file was created OK, but with the second one we've got an error: "Disk quota exceeded". </p><p>Change the quota for <code>joe</code> in the other window and try again: </p><pre>root@solaris:~# <kbd>zfs set quota=300m rpool/export/home/joe</kbd> </pre> 
+<p>Now change user to "<code>joe</code>" and check how much space you can use: </p><pre>root@solaris:# <kbd>su - joe </kbd>joe@solaris$ <kbd>mkfile 110m file1</kbd> joe@solaris$ <kbd>mkfile 110m file2 </kbd></pre><p>First file was created OK, but with the second one we've got an error: "Disk quota exceeded". </p><p>Change the quota for <code>joe</code> in the other window: </p><pre>root@solaris:~# <kbd>zfs set quota=300m rpool/export/home/joe</kbd> </pre> 
 <p>
-Then change back to <code>joe</code>'s window and try again:
+Then change back to the <code>joe</code>'s window and try again:
 </p>
 
 <pre>joe@solaris$ <kbd>/usr/sbin/mkfile 100m file2</kbd> </pre><p>Success! As you can see, it's pretty easy to create and manage ZFS filesystems. Remember, by default Solaris 11 creates
@@ -546,7 +544,15 @@ familiar with vi, check our Vi Quick Reference below): </p>
 reload the page in Firefox in your Solaris desktop. Did it work? Congratulations! </p><table width=50% cellpadding="0" cellspacing="0" border="0" bgcolor="lightgrey">
 <tr><td>
 <pre>Vi Quick Reference If you're unfamiliar with vi, following are a few common 
-keyboard commands to get you through this exercise: k = up j = down w = right or forward one word b = left or back one word l = right 1 char h = left 1 char x = delete 1 char u = undo i = insert dd = delete entire current line esc = get out of edit mode :wq = write and quit 
+keyboard commands to get you through this exercise: 
+i = switch to Insert mode
+
+Use Insert mode to type in your text.
+
+Esc = switch to Command mode
+
+In Command mode use:k = up j = down w = right or forward one word b = left or back one word l = right 1 char h = left 1 char x = delete 1 char u = undo dd = delete entire current line 
+:w = write (save) the current file:wq = write and quit 
 :w! = write to a read-only file:q! = quite ignoring changes (do not write) </pre>
 </td></tr></table><p>What else do we need? Try to create users in the zone. </p>
 <pre>root@zone1:~# <kbd>useradd -m jack</kbd> root@zone1:~# <kbd>passwd jack</kbd>
@@ -647,7 +653,7 @@ DTrace is not an exception here. Try the following one-liners and see what you c
 The usual way to work with DTrace scripts is to start them, wait for some time while DTrace is collecting data and then press Ctrl-C. </p><p>What processes are being started currently? New processes with arguments: </p>
 <kbd>dtrace -n 'proc:::exec-success { trace(curpsinfo->pr_psargs); }' </kbd><p>Longer version: new processes with arguments and time </p><kbd>dtrace -qn 'syscall::exec*:return \ 
 { printf("%Y %s\n",walltimestamp,curpsinfo->pr_psargs); }' </kbd><p>Which files are being opened by each starting process? </p><kbd>dtrace -n 'syscall::open*:entry \ 
-{ printf("%s %s",execname,copyinstr(arg0)); }' </kbd><p>System time is high. What are the programs doing, who is calling most of system calls? </p><kbd>dtrace -n 'syscall:::entry { @num[execname] = count(); }' </kbd><p>Which syscalls are being called most often? </p><kbd>dtrace -n 'syscall:::entry { @num[probefunc] = count(); }' </kbd><p>Which process is calling most of system calls? </p><kbd>dtrace -n 'syscall:::entry { @num[pid,execname] = count(); }' </kbd><p>Read IOPS are high. Who is reading now? Read bytes by process </p><kbd>dtrace -n 'sysinfo:::readch { @bytes[execname] = sum(arg0); }' </kbd><p>Write IOPS are high. Somebody is writing to disk, filling up all the space. Who is writing? </p><kbd>dtrace -n 'sysinfo:::writech { @bytes[execname] = sum(arg0); }' </kbd><p>How big are blocks being read? Read size distribution by process </p><kbd>dtrace -n 'sysinfo:::readch { @dist[execname] = quantize(arg0); }'</kbd> <p>Write size distribution by process </p><kbd>dtrace -n 'sysinfo:::writech { @dist[execname] = quantize(arg0); }' </kbd><p>Back to our example. Open another terminal window or a tab on your Solaris desktop. Write the following bash script: </p><pre>root@solaris:~$ <kbd>while true ; do date > /dev/null ; done</kbd> </pre><p>In your previous window/tab (where you have your root session open) run: </p><pre>root@solaris:~# <kbd>vmstat 1</kbd> </pre><p>What do you see? System time as about 70%, user time is about 30%, idle is 0%. 
+{ printf("%s %s",execname,copyinstr(arg0)); }' </kbd><p>System time is high. What are the programs doing, who is calling most of system calls? </p><kbd>dtrace -n 'syscall:::entry { @num[execname] = count(); }' </kbd><p>Which syscalls are being called most often? </p><kbd>dtrace -n 'syscall:::entry { @num[probefunc] = count(); }' </kbd><p>Which process is calling most of system calls? </p><kbd>dtrace -n 'syscall:::entry { @num[pid,execname] = count(); }' </kbd><p>Read IOPS are high. Who is reading now? Read bytes by process </p><kbd>dtrace -n 'sysinfo:::readch { @bytes[execname] = sum(arg0); }' </kbd><p>Write IOPS are high. Somebody is writing to disk, filling up all the space. Who is writing? </p><kbd>dtrace -n 'sysinfo:::writech { @bytes[execname] = sum(arg0); }' </kbd><p>How big are blocks being read? Read size distribution by process </p><kbd>dtrace -n 'sysinfo:::readch { @dist[execname] = quantize(arg0); }'</kbd> <p>Write size distribution by process </p><kbd>dtrace -n 'sysinfo:::writech { @dist[execname] = quantize(arg0); }' </kbd><p>Back to our example. Open another terminal window or a tab on your Solaris desktop. Write the following bash script: </p><pre>lab@solaris:~$ <kbd>while true ; do date > /dev/null ; done</kbd> </pre><p>In your previous window/tab (where you have your root session open) run: </p><pre>root@solaris:~# <kbd>vmstat 1</kbd> </pre><p>What do you see? System time as about 70%, user time is about 30%, idle is 0%. 
 System is really busy doing something in the kernel. Imagine you don't know what has happened in the other window. What would you do? </p><pre>root@solaris:~# <kbd>top</kbd></pre> <p>...shows nothing. Not a single process in the list is generating such high load. </p><pre>root@solaris:~# <kbd>prstat</kbd> </pre><p>...doesn't help as well. OK, let's think: high system time means a lot of system calls. 
 Use DTrace and ask: which program generates the most of the system calls? </p><pre>root@solaris:~# <kbd>dtrace -n 'syscall:::entry { @num[execname] = count(); }'</kbd> </pre><p>Does it look cryptic to you? No worries: we have just instructed DTrace to count 
 ("<code>count()</code>") every system call ("<code>syscall</code>") 
@@ -675,7 +681,7 @@ main DTT directory and are executable from command line. </p>
 <code>rwtop</code> examines at the syscall layer. This is application I/O. Much of this may be to the file system cache, some may make it to disk, and some may be for IPC. </p><p>8. <kbd>./Disk/iopattern 1 </kbd>: There are several scripts in the Disk directory for further analysis. 
 <code>iopattern</code> provides several useful metrics for understanding disk access behavior. </p><p>Also don't forget to have some fun with the scripts from Misc/ directory! </p><p><strong>Lab:</strong> To simulate this problem, we are going to use a small program that does 
 nothing but just eats disk space. First argument is the rate (in kB/sec) at which it will be eating space; 
-second argument is a name of big file we are going to create for that. (Just in case: the program is located in <code>/home/lab/bin/.</code>) </p><pre>root@solaris:~# <kbd>diskeater 100 /export/home/lab/bigfile</kbd> </pre><p>Open another terminal window, become a "<code>root</code>" there and check free space in your system's <code>/export/home</code> directory: </p><pre>root@solaris:~# <kbd>df -b /export/home</kbd> </pre><p>Repeat this several times and take a note how your free space is decreasing. 
+second argument is a name of big file we are going to create for that. (Just in case: the program is located in <code>/home/lab/bin/.</code>) </p><pre>root@solaris:~# <kbd>diskeater.py -s 100 -o /export/home/lab/bigfile</kbd> </pre><p>Open another terminal window, become a "<code>root</code>" there and check free space in your system's <code>/export/home</code> directory: </p><pre>root@solaris:~# <kbd>df -b /export/home</kbd> </pre><p>Repeat this several times and take a note how your free space is decreasing. 
 You can even try the following script to automate it: </p><pre>root@solaris:~# <kbd>while true ; do df -b /export/home ; sleep 1 ; done </kbd></pre><p>How can we find out which process is eating our disk space? Usually programs like <code>iostat</code> 
 don't give you per-process information, only per-disk I/O workload. Try this: </p><pre>root@solaris:~# <kbd>iostat -x 5</kbd> </pre><p>What do you see? Some writing activity on one of the disks, but nothing more detailed. 
 Think about other ways to solve this puzzle. Here is how it can be solved with DTrace Toolkit: </p><pre>root@solaris:~# <kbd>/usr/dtrace/DTT/rwtop</kbd> </pre><p>You will see something like this: </p><pre>

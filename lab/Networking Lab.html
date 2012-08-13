@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Oracle Solaris 11 Networking Lab</title>
+<link type="text/css" rel="stylesheet" href="lab.css" />
+</head>
+<body>
+<h1>Oracle Solaris 11 Networking Lab</h1>
+
+<p>In Solaris 11 several new networking commands were added, some management practices have changed to make network administration easier and more robust. In this lab we will learn some basic networking commands, compare them to the old ones and also work with network virtualization features, which are brand new in Solaris 11.</p>
+
+
+<h2><a id="N.1">Exercise N.1: Solaris 11 Networking Basics</a></h2>
+
+<p><strong>Task: </strong>You have to configure network interfaces and network services (DNS) in Solaris. </p>
+
+<p><strong>Lab: </strong>We will configure network interfaces in manual mode. We will use the new way of configuring DNS and also we will import the old configuration. We will use a new feature called Vanity Naming with allows you to give network interfaces any names you want. Note that when we use these new Solaris 11 commands, all the changes are persistent and will sustain a reboot. </p>
+
+<p>First, we'll change network management to Manual mode:</p>
+
+
+<pre>root@solaris:~# <kbd>netadm enable -p ncp DefaultFixed</kbd></pre>
+
+
+<p>Show available physical network interfaces:</p>
+
+<pre>root@solaris:~# <kbd>dladm show-phys</kbd></pre>
+
+<p>Create an interface with static IPv4 address (don't worry about the error messages when deleting net0):</p>
+
+<pre>
+root@solaris:~# <kbd>ipadm delete-ip net0</kbd>
+root@solaris:~# <kbd>ipadm create-ip net0</kbd>
+root@solaris:~# <kbd>ipadm show-if</kbd>
+root@solaris:~# <kbd>ipadm create-addr -T static -a local=10.9.8.7/24 net0/addr</kbd>
+root@solaris:~# <kbd>ipadm show-addr</kbd>
+</pre>
+
+<p>Create an interface and get the address from DHCP: </p>
+
+<pre>
+root@solaris:~# <kbd>ipadm delete-ip net0</kbd>
+root@solaris:~# <kbd>ipadm create-ip net0</kbd>
+root@solaris:~# <kbd>ipadm create-addr -T dhcp net0/addr</kbd>
+root@solaris:~# <kbd>ipadm show-addr</kbd>
+</pre>
+
+
+<p>Here is an example of activating DNS configuration. It's different from what you used before. 
+More and more services in Solaris are now configured using SMF framework to minimize human errors 
+and increase their robustness. </p>
+
+<pre>
+root@solaris:~# <kbd>svccfg -s dns/client 'setprop config/nameserver = net_address: 192.168.1.1'</kbd>
+root@solaris:~# <kbd>svccfg -s dns/client 'setprop config/domain = astring: "example.com" '</kbd>
+root@solaris:~# <kbd>svccfg -s name-service/switch 'setprop config/host = astring: "files dns" '</kbd>
+root@solaris:~# <kbd>svcadm refresh name-service/switch</kbd>
+root@solaris:~# <kbd>svcadm refresh dns/client</kbd>
+</pre>
+
+
+<p>Alternatively, you can edit the usual files resolv.conf and nsswitch.conf,
+but you have to import them into the naming service configuration:</p>
+<pre>
+root@solaris:~# <kbd>nscfg import -f svc:/system/name-service/switch:default</kbd>
+root@solaris:~# <kbd>nscfg import -f svc:/network/dns/client:default</kbd>
+root@solaris:~# <kbd>svcadm refresh dns/client</kbd>
+
+</pre>
+
+<p>Do you remember the days when you were a junior Solaris system administrator 
+and wondered why all network interfaces  in Solaris have these funny names? 
+<code>le, bge, ce, xge, e1000g...</code>. 
+Now, as you can see, they all are called net0, net1, net2, ... 
+Much simpler, right? Even more than that: you can give your interfaces your own names. 
+Here is the example. Show what we've got now: </p>
+
+<pre>
+root@solaris:~# <kbd>dladm show-phys</kbd>
+root@solaris:~# <kbd>ipadm show-addr</kbd>
+</pre>
+
+<p>Imagine we want to use our network interfaces for different services on our Solaris box. 
+We have web server, application server etc. We can name our network interfaces web1, app0, db1 etc. 
+Start by deleting the net0 IP interface</p>
+
+<pre>root@solaris:~# <kbd>ipadm delete-ip net0</kbd>
+</pre>
+
+<p>...now rename the NIC</p>
+<pre>
+root@solaris:~# <kbd>dladm rename-link net0 web1</kbd>
+root@solaris:~# <kbd>dladm show-phys</kbd></pre>
+<p>Add back in the IP interface</p>
+<pre>
+root@solaris:~# <kbd>ipadm create-ip web1</kbd></pre>
+<p>And put it under DHCP control like it was before</p>
+<pre>root@solaris:~# <kbd>ipadm create-addr -T dhcp web1/dhaddr</kbd></pre>
+<pre>root@solaris:~# <kbd>ipadm show-addr</kbd></pre>
+<p>Cleaning up... Undo it all</p>
+<pre>
+root@solaris:~# <kbd>ipadm delete-ip web1</kbd>
+root@solaris:~# <kbd>dladm rename-link web1 net0</kbd>
+root@solaris:~# <kbd>ipadm create-ip net0</kbd>
+root@solaris:~# <kbd>ipadm create-addr -T dhcp net0/dhaddr</kbd>
+root@solaris:~# <kbd>ipadm show-addr</kbd>
+</pre>
+
+<p>One word of advice: having this kind of freedom, please try to avoid long discussions about network interface naming, similar to what you have already had regarding host naming policies. :-) </p>
+
+<p>After we have learned what we can do in manual mode, let's get back to the Automatic mode.</p>
+
+<pre>root@solaris:~# <kbd>netadm enable -p ncp Automatic</kbd></pre>
+
+
+<h2><a id="N.2">Exercise N.2: Network Virtualization</a></h2>
+<p>
+<strong>Task: </strong>You want to create Virtual Network Interface Cards (VNICs) to use them with your Zones. You want to build and manage your application's network infrastructure completely inside the box for development and testing purposes.
+</p>
+
+<p><strong>Lab: </strong>We will create VNICs, assign IP addresses to them and learn how to limit bandwidth on them.</p>
+
+<p>First we show the links. Links can be physical or virtual. Note
+that for physical NICs, we use a new naming scheme net0, net1, etc.
+that hides the actual device name.</p> 
+
+<pre>root@solaris:~# <kbd>dladm show-link</kbd></pre>
+<p>Show only the physical ethernet NICs:</p>
+<pre>root@solaris:~# <kbd>dladm show-ether</kbd></pre>
+<p>And to see the actual hardware devices used for the netX NICs:</p>
+<pre>root@solaris:~# <kbd>dladm show-phys</kbd></pre>
+<p>The next command shows a bit more information like the physical
+location:</p>
+<pre>root@solaris:~# <kbd>dladm show-phys -L</kbd></pre>
+<p>So now we create a VNIC that we call vnic1, using net0 as it's interface
+Note that VNICs are first-class NICs in terms of visibility (e.g. snoop)</p>
+<pre>root@solaris:~# <kbd>dladm create-vnic -l net0 vnic1</kbd></pre>
+<p>Show the VNICs:</p>
+<pre>root@solaris:~# <kbd>dladm show-vnic</kbd></pre>
+<p>Show how easy it is to limit bandwith on a VNIC:</p>
+<pre>root@solaris:~# <kbd>dladm set-linkprop -p maxbw=40 vnic1</kbd>
+root@solaris:~# <kbd>dladm show-vnic</kbd></pre>
+<p>Now we create an IP interface. This is analgous to plumbing the interface:</p>
+<pre>root@solaris:~# <kbd>ipadm create-ip vnic1</kbd></pre>
+<p>Now we assign a persistent IP address to the VNIC:</p>
+<pre>root@solaris:~# <kbd>ipadm create-addr -T static -a 10.2.3.4 vnic1/v4static</kbd></pre>
+<p>Ping the VNIC:</p>
+<pre>root@solaris:~# <kbd>ping 10.2.3.4</kbd></pre>
+<p>Show all available datalinks, both physical and virtual</p>
+<pre>root@solaris:~# <kbd>dladm show-link</kbd></pre>
+<p>If you want to know more about the internals of these commands, here is how to show the "database" files where the dladm and ipadm commands keep their persistent data:</p>
+<pre>root@solaris:~# <kbd>ls -lrt /etc/dladm /etc/ipadm</kbd></pre>
+<p>But remember: you are not supposed to edit these files manually, always use <code>dladm</code> and <code>ipadm</code> commands!</p>
+<p>Finally list all IP addresses:</p>
+<pre>root@solaris:~# <kbd>ipadm show-addr</kbd></pre>
+<p>Now we tear down what we've just created:</p>
+<pre>root@solaris:~# <kbd>ipadm delete-addr vnic1/v4static</kbd>
+root@solaris:~# <kbd>ipadm delete-ip vnic1</kbd>
+root@solaris:~# <kbd>dladm delete-vnic vnic1</kbd>
+root@solaris:~# <kbd>dladm show-link</kbd>
+</pre>
+
+<p>Now you see how new networking commands work. Of course, you can still use the old-style <code>ifconfig</code>, but the new commands are easier to use and, most importantly, they make presistent changes.</p>
+
+<p>Find more food for thought and inspiration here: </p>
+<ul><li>How to Script Oracle Solaris 11 Zones Creation for a Network-In-a-Box Configuration<br>
+<a href="http://www.oracle.com/technetwork/articles/servers-storage-admin/o11-118-s11-script-zones-524499.html">http://www.oracle.com/technetwork/articles/servers-storage-admin/o11-118-s11-script-zones-524499.html</a></li>
+<li>How to Restrict Your Application Traffic Using Oracle Solaris 11 Network Virtualization and Resource Management<br>
+<a href="http://www.oracle.com/technetwork/articles/servers-storage-admin/o11-095-s11-app-traffic-525038.html">http://www.oracle.com/technetwork/articles/servers-storage-admin/o11-095-s11-app-traffic-525038.html</a></li>
+</ul>
+
+</body>
+</html>

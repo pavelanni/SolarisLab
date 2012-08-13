@@ -1,0 +1,46 @@
+body {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 0.875em;
+	line-height: 140%;
+}
+
+}
+kbd {
+	font-family: "Courier New", courier, monospace;
+	font-weight: bold;
+	font-size: small;
+}
+pre {
+	font-family: "Courier New", courier, monospace;
+	font-weight: normal;
+	font-size: small;
+}
+
+code {
+	font-family: "Courier New", courier, monospace;
+	font-weight: normal;
+	font-size: small;
+}
+
+
+table
+{
+    border:1px solid grey;
+    border-collapse:collapse;
+    width:80%;
+}
+th {
+    background-color:grey;
+    color:white;
+    padding:4px 7px 4px 7px;
+    border: 1px solid grey;
+    border-collapse:collapse;
+	font-size: small;
+}
+
+td {
+    padding:4px 7px 4px 7px;
+    border: 1px solid grey;
+    border-collapse:collapse;
+	font-size: small;
+}

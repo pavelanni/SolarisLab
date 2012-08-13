@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html> 
+<head> 
+<meta charset="utf-8" /> 
+<title>Oracle Solaris 11 Security Lab</title> 
+<link type="text/css" rel="stylesheet" href="lab.css" /> 
+</head>
+
+<body>
+
+<h1><a id="top">Oracle Solaris 11 Security Lab</a></h1>   
+            
+<h2>Table of Contents</h2>
+
+<p>
+<a href="#S.1">Exercise S.1: Introduction to Solaris RBAC and Privileges</a></br>
+<a href="#S.2">Exercise S.2: A Closer Look at Solaris Privileges</a></br>
+<a href="#S.3">Exercise S.3: Process Privileges and Rights</a></br>
+<a href="#S.4">Exercise S.4: SMF, Process Privileges and Authorizations</a></br>
+
+</p>
+
+
+<h2>Introduction</h2>
+
+<p>In this lab we we take quick tour of some of Oracle Solaris security features
+that can help you to protect your applications and your system. We will look at
+the following technologies:</p> 
+<ul> 
+<li>Privileges</li> 
+<li>RBAC (Rights and Authorizations)</li> 
+<li>Integration with SMF (Service Management Facility)</li>
+
+</ul>
+
+<p>For lab exercises S.3 and S.4, apache 2.2 is required. Check if it's installed already:</p>
+
+<pre>
+root@solaris:~# <kbd>pkg list *apache*</kbd> 
+NAME (PUBLISHER)                                  VERSION                    IFO
+web/server/apache-22                              2.2.20-0.175.0.0.0.2.537   i--
+
+</pre>
+
+<p>If Apache web server package is not installed, install it using the following command:</p>
+
+<pre>root@solaris:~# <kbd>pkg install apache-22</kbd> </pre>
+
+ <h2><a id="S.1"></a>Exercise S.1: Introduction to Solaris RBAC and
+ Privileges</h2>
+
+<p>Expected duration: 20 minutes</p>
+
+<p>The goal of this exercise is to gain a basic understanding of the
+RBAC/privileges framework in Solaris.</p>
+
+<h3>Background Information</h3>
+
+<p>Thanks to <a href="http://www.c0t0d0s0.org/authors/1-Joerg-Moellenkamp">Joerg Moellenkamp</a> and 
+his post on <a href="http://www.c0t0d0s0.org/archives/4073-Less-known-Solaris-features-RBAC-and-Privileges-Part-1-Introduction.html">
+Less known Solaris features: RBAC and Privileges - Part 1: Introduction</a> for the following introduction.</p>
+
+<h4>The Story of <code>root</code></h4>
+
+<p>And then there was <code>root</code>. And <code>root</code> was almighty. And that
+wasn't a good thing. <code>root</code> was able to control the world without any
+control. And <code>root</code> needed control. It was only a short chant between the
+mere mortals and <code>root</code>. Everybody with the knowledge of the magic chant
+was able to speak through <code>root</code>.</p>
+
+<p>But <code>root</code> wasn't alone. <code>root</code> had servants called daemons.
+Some of one them needed divine powers to do their daily job. But <code>root</code>
+was an undividable being. So the servants had to work with the powers of
+<code>root</code>. But the servants were not as perfect as root: Some of the
+servants started to do everything mere mortals said to them if they only said
+more than a certain amount of prayers at once.</p>
+
+<h4>Superuser</h4>
+
+<p>The old model of rights in a Unix systems is based on a duality. There is the
+superuser and the normal user. The normal users have a restricted set of rights
+in the system, the superuser has an unrestricted set of rights. To modify the
+system, a normal user has to login as <code>root</code> directly or assume the
+rights of root (by <code>su -</code>). But such a user has unrestricted access to
+the system. Often this isn't desirable. Why should you enable an operator to
+modify a system, when all he or she has do to on the system is create some users
+from time to time. You've trained them to do <code>useradd</code> or
+<code>passwd</code>. What do you do when they get too curious? They need
+<code>root</code> privileges to create a user or change a password. You need some
+mechanisms to limit this operator.</p>
+
+<p>But it gets more problematic. Programs have to modify the system to work. A
+web server is a good example. You expect it to use port 80, ports beneath port
+number 1024 are privileged ports. You need special rights to modify the
+structures of the system to listen to port 80. A normal user doesn't have these
+rights. So the web server has to be started as root. The children of this
+process drop the rights of root by running with a normal user. But there is this
+single instance of the program with all the rights of the superuser. This process has
+much more rights than needed, a possible attack vector for malicious users.</p>
+
+<h4>Least Privilege</h4>
+
+<p>There is a concept in security known as <em>least privilege</em>. You give
+someone only least amount of privileges, only enough to do the tasks they are
+assigned. An example of the real world - you won't give the janitor the master
+key for all the rooms on the campus, when all he has to do is work in Building
+C. The other way around - there are some trusted people who have access to all
+rooms in case of emergency.</p>
+
+<p>You have the same concept in computer security. Everyone should have only the
+least amount of privileges in the system to do their job. The concept of the
+superuser doesn't match to this, it's an all or nothing model. You are either an
+ordinary user with basic privileges or you are a user with unrestricted rights.
+There is nothing in between. This doesn't follow the least privileges model.</p>
+
+<h4>Role Based Access Control (RBAC)</h4>
+
+<p>The example with the key for the janitors is a good example. Let's imagine a
+large campus. You have janitors responsible for the plumbing (let's call them
+Lenny and Carl), for the park (let's call him Homer), for the security system
+(let's call her Marge and Lenny helps her from time to time).</p>
+
+<p>These roles have different sets of privileges: For example the plumbing
+janitors have access to all the rooms of the heating system. The janitor for the
+park has only access to the garage with the lawnmower.</p>
+
+<p>When they start to work in their job, they assume a role. From the privilege
+perspective it's not important who is the person, but what role the person has
+assumed. Lenny punches the clock and assumes the role of the plumbing janitor
+for the next 8 hours. And while he is doing its job he uses the privileges
+inherent to the role. But he also has to do tasks in his office or in his
+workshop. It's his own room, so he doesn't need the special privileges.</p>
+
+<p>Role Based Access Control is quite similar. You login to the system, and then
+you start to work. You read your emails (no special privileges needed), you find
+an email "Create user xy45345. Your Boss". Okay, now you need special
+privileges. You assume the role of a User Administrator and create the user. Job
+done, you don´t need the privileges anymore. You leave the role and write the
+"Job done" mail to your boss with your normal user's privileges.</p>
+
+<p>Role Based Access Control is all about this: Defining roles, giving them
+privileges and assigning users to this roles.</p>
+
+<h4>Privileges</h4>
+
+<p>I've used the word quite often in this introduction so far. What is a
+privilege? A privilege is the right to do something. For example, having the
+keys for the control panel of the heating system.</p>
+
+<p>Unix users are nothing different. Every user has privileges in a Unix system.
+A normal user has the privilege to open, close, read, write and delete files
+when he is allowed to do this (Because he created it, because he belongs to the
+same group as the creator of the file or the creator gave everybody the right to
+do it). This looks normal to you, but it's privilege based on the login
+credentials you gave to system. You don't have the privilege to read all files
+on the system or to use a port number 1024.</p>
+
+<p>Every thing done in the system is based on these privileges. Solaris has
+separated the tasks into many privilege sets. At the moment, there are more than 80
+different privileges in the system. Normal users have only a basic set of privileges,
+ while <code>root</code> has all of them.</p>
+
+<p>In Solaris the model has changed, privileges and users aren't connected with
+each other. You can give any user the power of the traditional "root user", and
+restrict the privileges of the root user. Solaris is configured to look as a
+traditional super user model due to its binary compatibility guarantee that
+mandates that the standard configuration of the system resembles the superuser
+model. There are applications out there, which assume that only the <code>root</code>
+user or the UID 0 has unrestricted rights and exit if they are started by a
+different user.</p>
+
+<p>The only thing that is special with UID 0 in Solaris is that it's the owner
+of the system configuration files, and thus has the capability to change system
+configurations.</p>
+
+<h3>RBAC and Privileges in Solaris</h3>
+
+<p>Both features have their roots in the Trusted Solaris product. Trusted Solaris
+was a version of Solaris to ensure the highest security standards. Today, these
+mechanisms are part of the normal Solaris in conjunction with the Trusted
+Extensions. So RBAC is a really old feature - it has been in Solaris since
+Solaris 8 (published in 2000). Privileges found their way into the generic
+Solaris with the first availability of Solaris 10 in February 2005.</p>
+
+<p>Lets start with some basic concepts for RBAC:</p>
+
+<ul> 
+
+<li><strong>Rights</strong>: A right is the permission, to execute an executable as
+an privileged user. For example the permission to execute the command
+<code>reboot</code> as <code>root</code>.</li>
+
+<li><strong>Authorization</strong>: A permission	that enables a user or role to
+perform a class of actions that could affect security. For example, security
+policy at installation gives ordinary users the <code>solaris.device.cdrw
+authorization</code>. This authorization enables users to read and write to a
+CD-ROM device.</li> 
+
+<li><strong>Right Profiles</strong>: A collection of administrative
+capabilities that can be assigned to a role or to a user. A rights profile can
+consist of authorizations, of commands with security attributes, and of other
+rights profiles. Rights profiles offer a convenient way to group security
+attributes.</li> 
+
+<li><strong>Role:</strong> A special identity for running privileged
+applications. The special identity can be assumed by assigned users only. In a
+system that is run by roles, superuser is unnecessary. Superuser capabilities
+are distributed to different roles.</li> 
+</ul>
+
+<p>Lets take a closer look at RBAC and roles:</p>
+
+<p>Open a terminal window by right clicking any point in the background of the
+desktop, and select "Open Terminal" in the pop-up menu.</p>
+
+
+<p>Lets look at what roles are assigned to our <code>lab</code> user. In a
+terminal, run the following command:</p> 
+
+<pre>lab@solaris:~$ <kbd>roles</kbd>
+root
+</pre> 
+
+<p>As you can see here you should be assigned the role <code>root</code>, it allows
+us to assume the <code>root</code> role. In Solaris 11 root is not a user but rather
+a role. So you have to login to the system as a normal user and then assume the
+<code>root</code> role with the <code>su</code> command.</p>
+
+<p>In a terminal window type as follows:</p> 
+
+<pre>lab@solaris:~$ <kbd>userattr type root</kbd> 
+role
+lab@solaris:~$ <kbd>auths root</kbd> 
+solaris.*
+</pre> 
+
+<p>As you can see here <code>root</code> is defined as a role with
+all solaris authorizations, the effect of this is similar to
+the old almighty <code>root</code> user. This is put in place for backwards
+compatibility.</p>
+
+<p>And as your user is assigned the <code>root</code> role, you can try this by
+assuming the <code>root</code> role:</p>
+
+<pre>lab@solaris:~$ <kbd>whoami</kbd>
+lab
+lab@solaris:~$ <kbd>su </kbd>
+Password: &lt;root password&gt; 
+lab@solaris:~# <kbd>whoami</kbd>
+root 
+lab@solaris:~# <kbd>who am i</kbd>
+lab   pts/1        Apr 21 07:32	(:0.0)
+lab@solaris:~# <kbd>exit </kbd>
+exit 
+lab@solaris:~$ </pre> 
+
+<p>Lets add a new user, Joe Doe to our system:</p> 
+
+<pre>lab@solaris:~$ <kbd>useradd -d /export/home/jdoe -m -c "Joe Doe" jdoe </kbd>
+UX: useradd: ERROR: Cannot update system - login cannot be created.
+</pre> 
+
+<p>As you can see here we are not allowed to use the <code>useradd</code> command.
+We will have to use <code>su</code> to execute <code>useradd</code> with "root"
+privileges, and assign missing rights to our account. The <code>su</code> command
+will prompt you for the root password.</p>
+
+ <pre>lab@solaris:~$ <kbd>su root -c "usermod -K profiles='User Management' lab" </kbd>
+Password: &lt;your root password&gt;
+
+lab@solaris:~$ <kbd>userattr profiles lab</kbd>
+User Management
+
+</pre>
+
+<p>As you can see, we now have the right to manage users. To take advantage of
+this right, we will invoke a profile shell, e.g. <code>pfbash</code>, and create the
+new user, jdoe.</p>
+
+
+
+<pre>
+lab@solaris:~$ <kbd>pfbash </kbd>
+lab@solaris:~$ <kbd>useradd  -m -c "Joe Doe" jdoe</kbd> 
+</pre>  
+
+<p>To change the
+user's password we have to have User Security profile assigned, but it is not
+advised to assign it to a regular user because it allows the user to change
+passwords of other users, including more powerful ones. User Management profile
+is safe, because you can only delegate what you already have. Therefore, let's
+change the password of the new user using root role:</p>
+
+
+<pre>lab@solaris:~$ <kbd>su root -c passwd jdoe</kbd> 
+Password: &lt;root password&gt; 
+New Password: <kbd>abc123</kbd> 
+Re-enter new Password: <kbd>abc123</kbd> 
+passwd: password successfully changed for jdoe
+lab@solaris:~$ <kbd>su - jdoe </kbd>
+Password: <kbd>abc123</kbd> 
+Oracle Corporation    SunOS 5.11 11.0    November 2011 
+jdoe@solaris:~$ <kbd>roles </kbd>
+No roles
+jdoe@solaris:~$ <kbd>su root</kbd> 
+Password: &lt;root password&gt; 
+Roles can only be assumed by authorized users 
+su: Sorry
+jdoe@solaris:~$ <kbd>exit</kbd> 
+lab@solaris:~$ 
+</pre> 
+
+
+<h4>NEW in Role Authentication in Solaris 11</h4>
+
+<p>Role Authentication procedure has changed in Solaris 11. Running earlier
+Solaris version, including Oracle Solaris 11 Express, user had to know role
+password in order to assume the role. Oracle Solaris 11 includes the ability to
+specify whether to use the role password or user password when a user wants to
+assume a given role. Administrators can specify either 'user' or
+'role' for the 'roleauth' keyword. If roleauth is not specified, 'role' is
+implied. Any newly created roles will be 'user' by default.</p>
+
+<h4>Summary</h4>
+
+<p>As you can see here <code>jdoe</code> doesn't have any roles assigned to him and
+he can't use <code>su</code> to assume the <code>root</code> role. We'll get back to him
+later. Now let's move on to a closer look at privileges in Exercise 2.</p>
+
+
+<h2><a id="S.2">Exercise S.2: A Closer Look at Solaris Privileges</a></h2>
+
+<p>Expected duration: 20 minutes </p>
+
+<p>The goal of this exercise is to understand Solaris privileges and how to use
+them.</p>
+
+<h3>Background Information</h3>
+
+<h4>Privileges</h4>
+
+<p>What are Privileges? Privileges are rights to do an operation in the kernel.
+These rights are enforced by the kernel. Whenever you do something within the
+kernel the access is controlled by privileges.</p>
+
+<h4>List of privileges</h4>
+
+<p>contract_event, contract_identity, contract_observer, cpc_cpu, dtrace_kernel,
+dtrace_proc, dtrace_user, file_chown, file_chown_self, file_dac_execute,
+file_dac_read, file_dac_search, file_dac_write, file_downgrade_sl,
+file_flag_set, <font color="#0000ff">file_link_any</font>, file_owner,
+file_setid, file_upgrade_sl, graphics_access, graphics_map, ipc_dac_read,
+ipc_dac_write, ipc_owner, net_access, net_bindmlp, net_icmpaccess,
+net_mac_aware, net_mac_implicit, net_observability, net_privaddr, net_rawaccess,
+proc_audit, proc_chroot, proc_clock_highres, <font
+color="#0000ff">proc_exec</font>, <font color="#0000ff">proc_fork</font>, <font
+color="#0000ff">proc_info</font>, proc_lock_memory, proc_owner, proc_priocntl,
+<font color="#0000ff">proc_session</font>, proc_setid, proc_taskid, proc_zone,
+sys_acct, sys_admin, sys_audit, sys_config, sys_devices, sys_ipc_config,
+sys_linkdir, sys_mount, sys_iptun_config, sys_dl_config, sys_ip_config,
+sys_net_config, sys_nfs, sys_ppp_config, sys_res_config, sys_resource, sys_smb,
+sys_suser_compat, sys_time, sys_trans_label, virt_manage, win_colormap,
+win_config, win_dac_read, win_dac_write, win_devices, win_dga, win_downgrade_sl,
+win_fontpath, win_mac_read, win_mac_write, win_selection, win_upgrade_sl,
+xvm_control</p>
+
+<p>Legend: <font color="#0000ff">blue - basic privilege</font></p>
+
+<h4>Conventional Unix</h4>
+
+<p>On conventional Unix systems you have a <code>root</code> user and <code>root</code> has all
+privileges. And you have a normal user, who has only a limited set of
+privileges. Sometimes you need the rights of an admin to do some tasks. You
+don't even need to administer the system.</p>
+
+<pre>
+lab@solaris:~$ <kbd>ls -l /usr/sbin/traceroute</kbd> 
+-r-sr-xr-x 1 root bin 46868 2010-11-05 08:02 /usr/sbin/traceroute 
+lab@solaris:~$ <kbd>ls -l /usr/sbin/ping</kbd> 
+-r-sr-xr-x 1 root bin 55940 2010-11-05 08:01 /usr/sbin/ping 
+</pre>
+
+
+
+<p>You can use <code>traceroute</code> and <code>ping</code> because
+both tools are <code>setuid</code> tools. <code>setuid</code> allows a process to run
+with a specific userid and <b>all</b> the privileges that come with that
+user. In the case of <code>setuid</code> to root user the process would have root's
+privileges. A <code>setuid</code> program in Solaris can be privilege-aware and
+hence only retain the privileges needed for the operation.</p>
+
+<p>You need a special privilege to <code>ping</code> - the privilege to
+use access ICMP. On conventional systems this right is reserved for the
+<code>root</code> user. Thus the <code>ping</code> program has to be executed with the
+rights of <code>root</code>. The problem: At the time of the execution of the
+program, the program has all the rights of the user. Not only to access ICMP,
+but the program is capable of doing everything on the system, such as deleting
+files in <code>/etc</code>. This may not a problem with <code>ping</code> or
+<code>traceroute</code> but think about larger programs. An exploit in a
+<code>setuid</code> program can lead to the escalation of the user's privileges.
+
+
+<p>Let's have a look at the privileges of an ordinary user. There is a tool to
+get the privileges of any given process in the system, it's called
+<code>ppriv</code>. The variable <code>$$</code> is a shortcut for the actual process id (in this
+case the process id of the user's shell):</p> 
+
+<pre>lab@solaris:~$ <kbd>ppriv $$ </kbd>
+1684:    -bash 
+flags = &lt;none&gt;
+    E: basic 
+    I: basic 
+    P: basic 
+    L: all 
+</pre> 
+
+<p>To find out what "basic" means, we can add <code>&#45;v</code> to the <code>ppriv</code> flag
+to expand the aliases:</p>  
+
+<pre>lab@solaris:~$ ppriv -v $$ 
+1684:    -bash flags = &lt;none&gt;
+	E: file_link_any,file_read,file_write,net_access,proc_exec,proc_fork,proc_info,proc_session
+	I: file_link_any,file_read,file_write,net_access,proc_exec,proc_fork,proc_info,proc_session
+	P: file_link_any,file_read,file_write,net_access,proc_exec,proc_fork,proc_info,proc_session
+	L: contract_event,contract_identity,contract_observer,cpc_cpu,dtrace_kernel,dtrace_proc,....
+
+
+ </pre>
+
+<p>Every process in the system has four sets of privileges that determine if a
+process is enabled to use a privilege or not. The theory of privileges is quite
+complex. I would suggest to read the chapter <a
+href="http://docs.oracle.com/cd/E19253-01/816-4863/priv-7/index.html">
+How Privileges Are Implemented"</a> in the 
+<a href="http://docs.oracle.com/cd/E19253-01/816-4863/index.html">
+Developers Guide to Oracle Solaris Security</a> 
+to learn how each set controls or is controlled other
+privilege sets.</p>
+
+<p>At this time, I want only to explain the meaning of the first letter: </p>
+
+<ul><li><b>E</b>: <b>E</b>ffective privileges set</li>
+	<li><b>I</b>: <b>I</b>nheritable privileges set</li> 
+    <li><b>P</b>: <b>P</b>ermitted privileges set</li> 
+    <li><b>L</b>: <b>L</b>imit privileges set</li> 
+</ul>
+
+
+
+
+
+<p>You can think about the privilege sets as keyrings. The
+<em>effective</em> privilege set are the keys the janitor has on its
+keyring. The <em>permitted</em> privilege set are the keys the janitor is
+allowed to put on its keyring. The janitor can decide to remove some of the
+keys. Perhaps he thinks: I work only in room 232 today, I don't need all the
+other keys. I'll leave them in my office. When he looses his keyring he lost
+only the control of this single room, not about the complete campus. </p>
+
+<p>The <em>inheritable</em> privilege set is not really a keyring. The
+janitor thinks about his new assistant: "Good worker, but I will not give him my
+key for the room with the expensive tools." The <em>limited
+privilege</em> set is the overarching order from the boss of janitor to his
+team leaders: "You are allowed to give your assistant the keys for normal rooms,
+but not for the rooms with all this blinking boxes from Oracle".
+</p>
+
+<p>At the moment the most interesting set is the E:. This is the effective set
+of privileges. This is the set of privilege effectively available to process.
+Compared to the full list of privileges mentioned above the set is much smaller.
+But this matches your experience when you use a Unix system. </p>
+
+<p>Lets see how it looks when we assume the root role:</p>  
+<pre>
+lab@solaris:~$ <kbd>su -</kbd> 
+Password: &lt;root password&gt; 
+Oracle Corporation    SunOS 5.11    11.0    November 2011
+You have new mail. 
+root@solaris:~# <kbd>ppriv $$</kbd> 
+1779:    -bash 
+flags = &lt;none&gt;
+    E: all 
+    I: basic 
+    P: all 
+    L: all 
+</pre>
+
+
+
+<p>This role has much more privileges. The effective set is much broader. When
+we assume the root role we assume all privileges in the system. NOTE: This is
+strictly to provide backwards compatibility and is not the recommended usage
+going forward.</p>
+
+<p>Lets add some privileges to our <code>jdoe</code> user, let's assume that he is a
+software developer that needs access to DTrace to debug some applications.</p>
+
+<p>First lets try to use DTrace as jdoe:</p> 
+<pre># <kbd>su - jdoe </kbd>
+Password: abc123 
+Oracle Corporation    SunOS 5.11    11.0    November 2011 
+jdoe@solaris:~$ ppriv $$ 
+1790:    -bash 
+flags = &lt;none&gt;
+    E: basic 
+    I: basic 
+    P: basic 
+    L: all 
+jdoe@solaris:~$ dtrace -l
+dtrace: failed to initialize dtrace: DTrace requires additional privileges
+</pre> 
+
+<p>As we can see here <code>jdoe</code> is missing some privileges to be allowed to
+use DTrace. There are have 3 privileges needed for DTrace: <code>dtrace_kernel,
+dtrace_proc, dtrace_user</code>, depending on what the user needs to use
+DTrace for. We can add these privileges to the user in three different ways: </p>
+
+<ol> <li>Add the privileges needed to the user. This would allow the user to use
+	DTrace as him or herself.</li>
+
+	<li>Create an execution profile with the <code>dtrace</code> command and the
+	needed 	privileges, and assign the profile to the user. This would allow him
+	or her to use a profile shell (i.e., <code>pfbash</code>) to execute the
+	<code>dtrace</code> command.</li> 
+
+    <li>Create a role with the needed privileges, and
+	assign the role to user. This 	would require the user to assume the role to
+	use DTrace.</li> 
+</ol>
+
+
+
+<p>Lets see how to add dtrace privileges directly to the user:</p> 
+<pre>
+root@solaris:~# usermod -K defaultpriv=basic,dtrace_kernel,dtrace_proc,dtrace_user jdoe 
+ </pre>
+
+
+
+<p>Let's see if <code>jdoe</code> now has all needed privileges to use the
+<code>dtrace</code> command:</p> 
+
+<pre>lab@solaris:~$ <kbd>su - jdoe </kbd>
+Password: <kbd>abc123 </kbd>
+Oracle Corporation    SunOS 5.11    11.0    November 2011 
+jdoe@solaris:~$ <kbd>ppriv $$ </kbd>
+1814: -bash 
+flags = &lt;none&gt; 
+    E: basic,dtrace_kernel,dtrace_proc,dtrace_user 
+    I: basic,dtrace_kernel,dtrace_proc,dtrace_user 
+    P: basic,dtrace_kernel,dtrace_proc,dtrace_user 
+    L: all
+jdoe@solaris:~$ <kbd>dtrace -l | more</kbd>
+   ID   PROVIDER            MODULE                          FUNCTION NAME
+    1     dtrace                                                     BEGIN
+    2     dtrace                                                     END
+    3     dtrace                                                     ERROR
+    7    syscall                                               nosys entry
+    8    syscall                                               nosys return
+    9    syscall                                               rexit entry
+   10    syscall                                               rexit return
+
+</pre> 
+
+<p>OK, so that worked, just for the fun of it lets try to create a role that
+does the same.</p>
+
+<p>First lets remove the dtrace privileges from jdoe:</p>  
+<pre>
+root@solaris:~# <kbd>usermod -K defaultpriv=basic jdoe</kbd>
+root@solaris:~# <kbd>userattr defaultpriv jdoe </kbd>
+basic 
+</pre> 
+
+<p>Then lets create a new role (using root shell, i.e. as a <em>root</em> user),
+lets call the role "bugger", and assign it to <code>jdoe</code></p>
+
+root@solaris:~# <kbd>roleadd -u 201 -d /export/home/bugger -P "Process Management" bugger</kbd>
+
+root@solaris:~# <kbd>passwd bugger </kbd>
+New Password: <kbd>abc123 </kbd>
+Re-enter new Password: <kbd>abc123</kbd> 
+passwd: password successfully changed for bugger
+
+root@solaris:~# <kbd>rolemod -K defaultpriv=basic,dtrace_kernel,dtrace_proc,dtrace_user bugger </kbd>
+root@solaris:~# <kbd>userattr defaultpriv bugger</kbd> 
+basic,dtrace_kernel,dtrace_proc,dtrace_user
+root@solaris:~# <kbd>usermod -R bugger jdoe </kbd>
+root@solaris:~# <kbd>roles jdoe</kbd> 
+bugger
+</pre>  
+
+
+<p>OK, lets try and see if <code>jdoe</code> now can use DTrace</p>  
+
+<pre>lab@solaris:~$ <kbd>su - jdoe</kbd>
+Password: Oracle Corporation    SunOS 5.11    11.0    November 2011
+jdoe@solaris:~$ <kbd>roles </kbd>
+bugger 
+jdoe@solaris:~$ <kbd>su bugger</kbd> 
+Password: 
+jdoe@solaris:~$ <kbd>ppriv $$</kbd> 
+1855:	bash
+flags = PRIV_PFEXEC
+	E: basic,dtrace_kernel,dtrace_proc,dtrace_user
+	I: basic,dtrace_kernel,dtrace_proc,dtrace_user
+	P: basic,dtrace_kernel,dtrace_proc,dtrace_user
+	L: all
+
+jdoe@solaris:~$ <kbd>dtrace -l | more</kbd>
+   ID   PROVIDER            MODULE                          FUNCTION NAME
+    1     dtrace                                                     BEGIN
+    2     dtrace                                                     END
+    3     dtrace                                                     ERROR
+    7    syscall                                               nosys entry
+    8    syscall                                               nosys return
+    9    syscall                                               rexit entry
+   10    syscall                                               rexit return
+
+</pre>  
+
+<h3>Summary</h3>
+
+<p>Now you should have a basic understanding about privileges and how you can
+assign them to users, however wouldn't it be nice if we could do the same to
+processes? We will look at that in Exercise S.3.</p> 
+
+<h2><a id="S.3">Exercise S.3: Process Privileges and Rights</a></h2>
+
+<p>Expected duration: 10 minutes</p>
+
+<h3>Background</h3>
+
+<p>We have looked at how you can add privileges to a user, now we'll look at how
+privileges interact with processes, we will look at both processes that are
+<em>privilege aware</em> and processes that are <em>non-privilege
+aware</em>.</p>
+
+<p>The idea of managing privileges is not limited to users and their shells.
+In any given system you find dozens of programs running as daemons.</p>
+
+<p>These daemons interact in several ways with the privileges. The best way is
+"<em>privilege-aware programming</em>". Let's assume you code a daemon for your
+system. For example: You know that your daemon will never do an <code>exec()</code>
+call. So you can safely drop this privilege. The process modifies the permitted
+privilege set. The process can remove a privilege but not add it. Even when
+someone is able to access your process, the attacker can't make an
+<code>exec()</code> call. The process doesn't even have the privilege to do such a
+call. And the attacker can't add the privilege again. Several processes and
+programs in Solaris are already privilege aware. For example the kernel-level
+cryptographic framework daemon. Let's look at the privileges of the daemon.</p>
+
+<p>In order to observe or manage privileges, a process must itself already have
+those privileges. Therefore we will assume the root role for the following
+exercise.</p>
+
+<pre>lab@solaris:~$ <kbd>su - root</kbd>
+Password: &lt;root password&gt; 
+root@solaris:~# ps -ef | grep kcfd 
+  daemon    80     1   0 06:04:21 ?           0:00 /lib/crypto/kcfd
+
+root@solaris:~# <kbd>ppriv -v 80</kbd>
+80:	/lib/crypto/kcfd
+flags = PRIV_AWARE
+	E: file_owner,file_read,file_write,net_access,proc_priocntl,sys_devices
+	I: none
+	P: file_owner,file_read,file_write,net_access,proc_priocntl,sys_devices
+	L: none
+
+</pre>
+
+<p>This daemon doesn't have even the basic privileges of a regular user. It has
+the only the bare minimum of privileges to do its job.</p>
+
+<h3>Non-privilege aware processes</h3>
+
+<p>But the world isn't perfect. Not every process is privilege aware. Thus you
+have to limit the privileges by other mechanisms. The Service Management
+Facility comes to help. The following example is copied from Glenn Brunette's
+Blueprint <a href="http://www.oracle.com/technetwork/server-storage/archive/a11-009-limiting-privileges-sol10-438977.pdf">
+Limiting Service Privileges in the Solaris 10 Operating
+System</a>.</p>
+
+<p>Let's take the Apache Webserver as an example. The apache web server is not
+privilege aware. We start the daemon via the Service Management Framework
+(SMF).</p>
+
+<pre>root@solaris:~# <kbd>svcadm -v enable -s apache22 </kbd>
+svc:/network/http:apache22 enabled. </pre> 
+
+<p>OK, now we look at the processes of the Apache daemons.</p>
+
+<pre>root@solaris:~# <kbd>ps -ef | grep "apache" | grep -v grep</kbd>
+webservd  1894  1891   0 12:35:00 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+webservd  1892  1891   0 12:35:00 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+webservd  1893  1891   0 12:35:00 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+    root  1891     1   0 12:34:59 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+webservd  1895  1891   0 12:35:00 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+webservd  1896  1891   0 12:35:00 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+
+</pre> 
+
+<p>Five daemons are running as webservd, and one is running as root.</p>
+
+<pre>
+root@solaris:~# <kbd>ppriv 1891</kbd>
+1891:	/usr/apache2/2.2/bin/httpd -k start
+flags = <none>
+	E: all
+	I: basic
+	P: all
+	L: all
+</pre> 
+
+<p>As expected for a root process, this process has the complete set of
+privileges of a root user. Now lets look at one of its children:</p>
+
+<pre>
+root@solaris:~# <kbd>ppriv 1895</kbd>
+1895:	/usr/apache2/2.2/bin/httpd -k start
+flags = <none>
+	E: basic
+	I: basic
+	P: basic
+	L: all
+</pre> 
+
+<p>Much better... Only basic privileges.</p>
+
+<p>OK, There is a reason for this configuration. On Unix systems, you have two
+groups of ports. Privileged ones from 1-1023 and unprivileged ones from 1024 up.
+You can only bind to a privileged port with the privilege to do it. A normal
+user doesn't have this privilege, but <code>root</code> does. And thus there has to be one
+process running as root. Do you remember the list of privileges for the apache
+process running at root? The process has all privileges but needs only one of
+them, that isn't part of the basic privilege set.</p>
+
+
+<h2><a id="S.4">Exercise S.4: SMF, Process Privileges and Authorizations</a></h2>
+
+<p>Expected duration: 10 minutes</p>
+
+<h3>Introduction</h3>
+
+<p>We have now looked at both privilege aware and non-privilege aware processes,
+now lets look at how we can use SMF to let a user with a limited set of
+privileges manage a non-privilege aware process and give it the required
+privileges without using setuid to root.</p>
+
+<p>In order to observe or manage privileges, a process must itself already have
+those privileges. Therefore we will assume the root role for the following
+exercise.</p>
+
+
+
+<h3>Background</h3>
+
+<h4>How to get rid of the <code>root</code> apache process</h4>
+
+<p>It doesn't have to be this way. With Solaris you can give any user or process the
+privilege to use a privileged port. You don't need the root process anymore.</p>
+
+<p>Let's configure it this way. At first we have to deactivate the running
+apache from Exercise S.3:</p>
+
+<pre>
+lab@solaris:~$ <kbd>su - root</kbd>
+Password: &lt;root password&gt; 
+root@solaris:~# <kbd>svcadm -v disable -s apache22</kbd>
+svc:/network/http:apache22 disabled. </pre> 
+
+<p>We will not be explaining the Service Management Facility here, but you can
+set certain properties in SMF to control the startup of a service:</p>
+
+<pre>
+1  root@solaris:~# <kbd>svccfg -s apache22</kbd> 
+2  svc:/network/http:apache22&gt; <kbd>setprop start/user = astring: webservd</kbd> 
+3  svc:/network/http:apache22&gt; <kbd>setprop start/group = astring: webservd</kbd> 
+4  svc:/network/http:apache22&gt; <kbd>setprop start/privileges = astring: basic,!proc_session,!proc_info,!file_link_any,net_privaddr</kbd> 
+5  svc:/network/http:apache22&gt; <kbd>setprop start/limit_privileges = astring: :default</kbd> 
+6  svc:/network/http:apache22&gt; <kbd>setprop start/use_profile = boolean: false </kbd>
+7  svc:/network/http:apache22&gt; <kbd>setprop start/supp_groups = astring: :default</kbd> 
+8  svc:/network/http:apache22&gt; <kbd>setprop start/working_directory = astring: :default </kbd>
+9  svc:/network/http:apache22&gt; <kbd>setprop start/project = astring: :default </kbd>
+10 svc:/network/http:apache22&gt; <kbd>setprop start/resource_pool = astring: :default </kbd>
+11 svc:/network/http:apache22&gt; <kbd>end</kbd>
+
+</pre> 
+
+<p>Line 2 to 4 are the most interesting ones. Without any changes, the Apache
+daemon starts as root and forks away processes with the webservd user. But we
+want to get rid of the root user for this configuration. Thus we start the
+daemon directly with the webservd user, the same goes for the group id.</p>
+
+<p>Now it gets interesting. Without this line (line 4), the kernel would deny
+Apache to bind to port 80. webservd is a regular user without the privilege to
+use a privileged port. The property <code>start/privileges</code> sets the
+privileges to start the service. At first, we give the service basic privileges.
+Then we add the privilege to use a privileged port. The service would start up
+now.</p>
+
+<p>But wait, we can do more. A webserver shouldn't do any hardlinks. And it
+doesn't send signals outside it's session. And it doesn't look at processes
+other than those to which it can send signals. We don't need these privileges.
+<b>proc_session</b>, <b>proc_info</b> and <b>file_link_any</b> are part of the
+basic privilege set. We remove them, by adding a &#33; in front of the
+privilege:</p>
+
+<pre>root@solaris:~# <kbd>svcadm -v refresh apache22</kbd>  
+Action refresh set for svc:/network/http:apache22.
+</pre>
+
+<p>OK, we have notified SMF of the configuration changes.</p>
+
+<p>Until now, the apache daemon used the <code>root</code> privileges. Thus the
+ownership of files and directories were unproblematic. The daemon was able to
+read and write in any directory or file in the system. As we drop its privilege
+set by using a regular user, we have to modify the ownership of some files and
+move some files:</p>
+
+<pre>
+root@solaris:~# <kbd>mkdir -p -m 755 /var/apache2/2.2/run</kbd> 
+root@solaris:~# <kbd>chown webservd:webservd /var/apache2/2.2/run</kbd> 
+root@solaris:~# <kbd>chown webservd:webservd /var/apache2/2.2/logs/access_log</kbd> 
+root@solaris:~# <kbd>chown webservd:webservd /var/apache2/2.2/logs/error_log</kbd>
+
+</pre>
+
+<p>We need some configuration changes, too. We have to move the LockFile and the
+PidFile. There wasn't one of the two configuration directives specified earlier,
+thus we're simply appending them to the end of the configuration file:</p>
+
+<pre>
+root@solaris:~# <kbd>bash -c 'echo LockFile /var/apache2/2.2/logs/accept.lock &gt;&gt; /etc/apache2/2.2/httpd.conf'</kbd>
+root@solaris:~# <kbd>bash -c 'echo PidFile /var/apache2/2.2/run/httpd.pid &gt;&gt; /etc/apache2/2.2/httpd.conf'</kbd> 
+</pre> 
+
+<p>OK, everything is in place. Let´s give it a try.</p>
+
+
+
+<pre>
+root@solaris:~# <kbd>svcadm disable apache22</kbd> 
+svc:/network/http:apache22 disabled. 
+root@solaris:~# <kbd>svcadm -v enable -s apache22</kbd> 
+svc:/network/http:apache22 enabled. 
+</pre> 
+
+<p>Now we check for the running httpd processes:</p>
+
+<pre>
+root@solaris:~# <kbd>ps -ef | grep httpd | grep -v grep</kbd>
+webservd  2032  2031   0 14:34:27 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+webservd  2031     1   1 14:34:26 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+webservd  2033  2031   0 14:34:27 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+webservd  2034  2031   0 14:34:27 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+webservd  2036  2031   0 14:34:27 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+webservd  2035  2031   0 14:34:27 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
+</pre>
+
+<p>You notice the difference ? There is no httpd running as root. All processes
+run with the userid webservd. Mission accomplished.</p>
+
+<p>Let's check the privileges of the processes. At first the one, who ran as
+<code>root</code> before:</p>
+
+<pre>root@solaris:~# ppriv 2031
+2031:	/usr/apache2/2.2/bin/httpd -k start
+flags = &lt;none&gt;
+	E: basic,!file_link_any,net_privaddr,!proc_info,!proc_session
+	I: basic,!file_link_any,net_privaddr,!proc_info,!proc_session
+	P: basic,!file_link_any,net_privaddr,!proc_info,!proc_session
+	L: all
+</pre>
+
+
+<p>Only the least privileges to do the job, no root privileges. And even the
+other processes are more secure now. Before we changed the configuration of the
+webserver, it had the basic privileges of a regular user. Now we have limited even
+this set.</p>
+
+<p>But we still need to be a privileged user to start apache. Wouldn't it be
+nice if I could delegate management of "services" to unprivileged users. I can
+use authorizations to do that, and authorizations is integrated with SMF. There
+are two authorizations we will need to add to our user to give hi the right to
+manage the apach22 service. We need an authorization to manage our service as
+well as a authorization to change the state of our service:</p>
+
+<ul>
+
+	<li><code>solaris.smf.value.http/apache22</code> &#45; Gives a user the right to
+	modify the value of a property in the Apache service.</li>
+	<li><code>solaris.smf.manage.http/apache22</code> &#45; Gives a user the right to
+	change the state of a the Apache service with <code>svcadm</code>.</li> </ul>
+
+ <p>Both are needed to change the state of a service, as the state of the
+ service is kept as a property for the service.</p>
+
+<pre>
+root@solaris:~# <kbd>svcprop http:apache22 | grep auth</kbd> 
+httpd/value_authorization astring solaris.smf.value.http/apache22 
+general/action_authorization astring solaris.smf.manage.http/apache22 
+general/value_authorization astring solaris.smf.value.http/apache22 
+</pre> 
+
+<p>First we need to add our authorizations to <code>/etc/security/auth_attr</code></p> 
+
+<pre>
+root@solaris:~# <kbd>echo solaris.smf.manage.http:::Mange Apache 2.2:: &gt;&gt; /etc/security/auth_attr </kbd>
+root@solaris:~# <kbd>echo solaris.smf.value.http:::Mange Apache 2.2:: &gt;&gt; /etc/security/auth_attr</kbd>
+</pre>
+
+<p><b>Note: </b>In most SMF manifests one authorization is used for both action_authorization and
+value_authorization, as they are commonly used together.</p>
+
+<p>Now lets add those authorizations to our old friend <code>jdoe</code>.</p>
+
+<pre>
+root@solaris:~# <kbd>usermod -A solaris.smf.manage.http/apache22,solaris.smf.value.http/apache22 jdoe</kbd>
+Found user in files repository.
+root@solaris:~# <kbd>userattr auths jdoe</kbd>
+solaris.smf.manage.http/apache22,solaris.smf.value.http/apache22
+</pre>
+
+<p>Lets see if <code>jdoe</code> can start and stop apache now</p>
+
+<pre>
+root@solaris:~# <kbd>su - jdoe</kbd>
+Oracle Corporation	SunOS 5.11	11.0	 November 2011
+jdoe@solaris:~$ <kbd>svcadm disable apache22</kbd>
+jdoe@solaris:~$ <kbd>svcs *apache*</kbd>
+STATE          STIME    FMRI
+disabled       14:57:51 svc:/network/http:apache22
+jdoe@solaris:~$ <kbd>svcadm enable apache22</kbd>
+jdoe@solaris:~$ <kbd>svcs *apache*</kbd>
+STATE          STIME    FMRI
+online         14:58:24 svc:/network/http:apache22
+</pre>
+
+
+
+<p>That worked fine, so by using SMF we've been able to take a service such
+as apache, remove its need to start as root by giving it the privileges it
+needed and nothing more. We also removed some privileges that apache doesn't
+need, but a hacker might use them to take control of your system.</p>
+
+<p>Add to that we added the right to manage the apache service via SMF to an
+unprivileged user by giving him the correct authorizations that allows a user to
+manage that particular service and nothing else, as you can see here.</p>
+
+<pre>
+jdoe@solaris:~$ <kbd>svcs sendmail</kbd> 
+STATE          STIME    FMRI 
+online          6:48:12 svc:/network/smtp:sendmail 
+jdoe@solaris:~$ <kbd>svcadm disable sendmail </kbd>
+svcadm: svc:/network/smtp:sendmail: Permission denied. 
+</pre>
+
+
+<p>Congratulations!  You have successfully completed Oracle Solaris 11 Security Lab.</p>
+
+<p>For additional information about the technologies used in this lab, please
+see the following links:</p>
+
+<p><a
+href="http://www.oracle.com/technetwork/server-storage/solaris/overview/security-163473.html">
+http://www.oracle.com/technetwork/server-storage/solaris/overview/security-163473.html</a><br/>
+
+<a
+href="http://www.oracle.com/us/products/servers-storage/solaris/security/index.html">
+http://www.oracle.com/us/products/servers-storage/solaris/security/index.html</a>
+</p>
+
+<p><a href="http://www.oracle.com/technetwork/server-storage/archive/a11-010-restricting-svcadmin-sol10-438978.pdf">
+Restricting Service Administration in the Solaris 10 OS</a><br/>
+
+<a href="http://www.oracle.com/technetwork/server-storage/archive/a11-009-limiting-privileges-sol10-438977.pdf">
+Limiting Service Privileges in the Solaris 10 OS</a><br/>
+
+<a href="http://www.oracle.com/technetwork/server-storage/archive/a11-012-privilege-debugging-sol10-439762.pdf">
+Privilege Debugging in the Solaris 10 Operating System</a><br/> 
+
+<a href="http://www.oracle.com/technetwork/server-storage/archive/a11-015-privilege-bracketing-sol10-439767.pdf">
+Privilege Bracketing in the Solaris 10 Operating System</a></p>
+
+
+
+</body> </html>

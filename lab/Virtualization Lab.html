@@ -5,7 +5,7 @@
 <title>Oracle Solaris 11 Virtualization Lab</title>
 <meta name="generator" content="Bluefish 2.0.2" >
 <meta name="author" content="Lab User" >
-<meta name="date" content="2012-08-28T17:14:22-0400" >
+<meta name="date" content="2012-09-05T14:52:47-0400" >
 <meta name="copyright" content="Oracle Corporation, 2011-2012">
 <link type="text/css" rel="stylesheet" href="lab.css" />
 </head>
@@ -23,7 +23,7 @@
 
 </p>
 <h2><a id="V.1">Exercise V.1: Zones </a></h2><p><strong>Task:</strong> Your development team wants a separate environment to develop their new application. </p><p><strong>Lab:</strong> We are going to use Solaris virtualization technology called Solaris Zones. First, we have 
-to create a filesystem where all the zones will be located. In Solaris 11 it must be a ZFS filesystem. </p><pre>root@solaris:~# <kbd>zfs create -o compress=gzip -o dedup=on -o mountpoint=/zones rpool/zones</kbd> </pre>
+to create a filesystem where all the zones will be located. In Solaris 11 it must be a ZFS filesystem. </p><pre>root@solaris:~# <kbd>zfs create -o mountpoint=/zones rpool/zones</kbd> </pre>
 
 <p>(Now we know how to save space with ZFS compression and dedup options!) </p>
 <p>Check if it's created and mounted: </p><pre>root@solaris:~# <kbd>zfs list rpool/zones</kbd> NAME         USED  AVAIL  REFER  MOUNTPOINT

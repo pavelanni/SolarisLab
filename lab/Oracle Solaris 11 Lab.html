@@ -3,7 +3,7 @@
 <title>Introduction to Oracle Solaris 11 Hands-on Lab</title>
 <meta name="generator" content="Bluefish 2.0.2" >
 <meta name="author" content="Lab User" >
-<meta name="date" content="2012-07-27T18:00:32-0400" >
+<meta name="date" content="2012-09-10T14:24:03-0400" >
 <meta name="copyright" content="Oracle Corporation, 2011-2012">
 <meta charset="utf-8" />
 <link type="text/css" rel="stylesheet" href="lab.css" />
@@ -14,17 +14,17 @@
 <h1>An Introduction to Oracle Solaris 11</h1> 
 
 <h3><em>Author: Pavel Anni, Oracle</em></h3>
-<h4><em>pavel.anni@oracle.com</em></h4><h4><em>July 2012</em></h4>
+<h4><em>pavel.anni@oracle.com</em></h4><h4><em>September 2012</em></h4>
 <h2>Lab Introduction </h2><p>In this lab we introduce the most interesting features of Solaris 11, based on real life use cases. We will: </p><ul>
 <li>create a pool and a file system with ZFS; expand it; snapshot and clone it; use ZFS compression and deduplication; </li>
-<li>create a new boot environment as a backup, make our current system unbootable because of some fatal mistakes, reboot the system using backup BE;</li><li>create a couple of zones; install some applications into them; clone a zone; use Resource Management with the zones; </li>
+<li>create a new boot environment as a backup, make our current system unbootable because of some fatal mistakes, reboot the system using backup BE;</li>
+<li>use new packaging system called IPS to search, install, verify and fix packages; update the system using IPS and Boot Environments together;</li>
+<li>use new networking commands, configure virtual network interfaces;</li><li>create a couple of zones; install some applications into them; clone a zone; use Resource Management with the zones; </li>
 <li>learn some Solaris security features which help to protect your systems and applications;</li><li>use DTrace to find bottlenecks in the system</li> 
 </ul>
 
-<h2>Prerequisites </h2><p>This lab requires access to Solaris 11 system either in VirtualBox virtual machine or in Oracle Solution Center cloud. </p>
-
-<h3>Using the Oracle Solution Center cloud installation</h3> <p>
-Use your OSC instructions. You will be provided with IP addresses, access instructions and login credentials by your OSC instructor.</p> <h3>Using Your Machine</h3> <p>If you're performing this lab on your own machine, we've provided a VirtualBox appliance that contains 
+<h2>Prerequisites </h2><p>This lab requires access to a Solaris 11 system either natively or in VirtualBox virtual machine.</p>
+<h3>Using Virtual Box VM</h3> <p>If you're performing this lab on your laptop or desktop, we've provided a VirtualBox appliance that contains 
 all the software and configuration necessary to complete this lab. 
 All you need is VirtualBox software and a modern (with a CPU supporting virtualization turned on, AMD-V or VT-x) 
 laptop/desktop with at least 3 GB of RAM and 10GB of free disk space. </p><ul>
@@ -159,6 +159,8 @@ Oracle Solaris 11: </p>
 </ul>
 
 <p>Get more details at the Oracle University page: <a href="http://bit.ly/OracleSolaris11Edu">http://bit.ly/OracleSolaris11Edu</a> .</p>
+
+<p>If you prefer to study Oracle Solaris 11 yourself, there is a book available: <a href="http://www.amazon.com/Oracle-Solaris-Administration-Complete-Reference/dp/007179042X/">Oracle Solaris 11 System Administration The Complete Reference</a> </p>
 <p>Good luck! </p></body>
 </html>
 

@@ -25,7 +25,6 @@
 <h2><a id="V.1">Exercise V.1: Zones </a></h2><p><strong>Task:</strong> Your development team wants a separate environment to develop their new application. </p><p><strong>Lab:</strong> We are going to use Solaris virtualization technology called Solaris Zones. First, we have 
 to create a filesystem where all the zones will be located. In Solaris 11 it must be a ZFS filesystem. </p><pre>root@solaris:~# <kbd>zfs create -o mountpoint=/zones rpool/zones</kbd> </pre>
 
-<p>(Now we know how to save space with ZFS compression and dedup options!) </p>
 <p>Check if it's created and mounted: </p><pre>root@solaris:~# <kbd>zfs list rpool/zones</kbd> NAME         USED  AVAIL  REFER  MOUNTPOINT
 rpool/zones   31K  7.92G    31K  /zones</pre><p>Create a zone with a minimum set of parameters: <code>name</code> (in our case it will be <code>zone1</code>) and <code>zonepath</code>, 
 where the zone's files will be located. </p><pre>root@solaris:~# <kbd>zonecfg -z zone1 </kbd>zone1: No such zone configured Use 'create' to begin configuring a new zone. zonecfg:zone1> <kbd>create</kbd> 

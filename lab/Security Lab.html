@@ -3,9 +3,9 @@
 <head> 
 <meta charset="utf-8" /> 
 <title>Oracle Solaris 11 Security Lab</title> 
-<meta name="generator" content="Bluefish 2.0.2" >
-<meta name="author" content="Lab User" >
-<meta name="date" content="2012-08-28T17:14:09-0400" >
+<meta name="generator" content="Bluefish 2.2.3" >
+<meta name="author" content="Pavel Anni" >
+<meta name="date" content="2012-09-18T14:40:31-0400" >
 <meta name="copyright" content="Oracle Corporation, 2011-2012">
 <link type="text/css" rel="stylesheet" href="lab.css" /> 
 </head>
@@ -37,7 +37,7 @@ the following technologies:</p>
 
 </ul>
 
-<p>For lab exercises S.3 and S.4, apache 2.2 is required. Check if it's installed already:</p>
+<p>For the lab exercises S.3 and S.4, apache 2.2 is required. Check if it's installed already:</p>
 
 <pre>
 root@solaris:~# <kbd>pkg list *apache*</kbd> 
@@ -260,7 +260,7 @@ lab@solaris:~$ </pre>
 
 <p>Lets add a new user, Joe Doe to our system:</p> 
 
-<pre>lab@solaris:~$ <kbd>useradd -d /export/home/jdoe -m -c "Joe Doe" jdoe </kbd>
+<pre>lab@solaris:~$ <kbd>useradd -m -c "Joe Doe" jdoe </kbd>
 UX: useradd: ERROR: Cannot update system - login cannot be created.
 </pre> 
 
@@ -296,7 +296,7 @@ is safe, because you can only delegate what you already have. Therefore, let's
 change the password of the new user using root role:</p>
 
 
-<pre>lab@solaris:~$ <kbd>su root -c passwd jdoe</kbd> 
+<pre>lab@solaris:~$ <kbd>su root -c 'passwd jdoe'</kbd> 
 Password: &lt;root password&gt; 
 New Password: <kbd>abc123</kbd> 
 Re-enter new Password: <kbd>abc123</kbd> 
@@ -663,7 +663,7 @@ Password: &lt;root password&gt;
 root@solaris:~# ps -ef | grep kcfd 
   daemon    80     1   0 06:04:21 ?           0:00 /lib/crypto/kcfd
 
-root@solaris:~# <kbd>ppriv -v 80</kbd>
+root@solaris:~# <kbd>ppriv -v 80</kbd> (substitute 80 with the process ID you obtained from the previous command)
 80:	/lib/crypto/kcfd
 flags = PRIV_AWARE
 	E: file_owner,file_read,file_write,net_access,proc_priocntl,sys_devices
@@ -791,7 +791,7 @@ set certain properties in SMF to control the startup of a service:</p>
 
 </pre> 
 
-<p>Line 2 to 4 are the most interesting ones. Without any changes, the Apache
+<p>Lines 2 to 4 are the most interesting ones. Without any changes, the Apache
 daemon starts as root and forks away processes with the webservd user. But we
 want to get rid of the root user for this configuration. Thus we start the
 daemon directly with the webservd user, the same goes for the group id.</p>
@@ -839,7 +839,7 @@ root@solaris:~# <kbd>bash -c 'echo LockFile /var/apache2/2.2/logs/accept.lock &g
 root@solaris:~# <kbd>bash -c 'echo PidFile /var/apache2/2.2/run/httpd.pid &gt;&gt; /etc/apache2/2.2/httpd.conf'</kbd> 
 </pre> 
 
-<p>OK, everything is in place. Let´s give it a try.</p>
+<p>OK, everything is in place. Let's give it a try.</p>
 
 
 
@@ -862,7 +862,7 @@ webservd  2036  2031   0 14:34:27 ?           0:00 /usr/apache2/2.2/bin/httpd -k
 webservd  2035  2031   0 14:34:27 ?           0:00 /usr/apache2/2.2/bin/httpd -k start
 </pre>
 
-<p>You notice the difference ? There is no httpd running as root. All processes
+<p>Did you notice the difference ? There is no httpd running as root. All processes
 run with the userid webservd. Mission accomplished.</p>
 
 <p>Let's check the privileges of the processes. At first the one, who ran as

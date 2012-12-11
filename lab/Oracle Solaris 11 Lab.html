@@ -1,9 +1,9 @@
 <html>
 <head>
 <title>Introduction to Oracle Solaris 11 Hands-on Lab</title>
-<meta name="generator" content="Bluefish 2.0.2" >
-<meta name="author" content="Lab User" >
-<meta name="date" content="2012-09-10T14:24:03-0400" >
+<meta name="generator" content="Bluefish 2.2.3" >
+<meta name="author" content="Pavel Anni" >
+<meta name="date" content="2012-11-27T20:15:55-0500" >
 <meta name="copyright" content="Oracle Corporation, 2011-2012">
 <meta charset="utf-8" />
 <link type="text/css" rel="stylesheet" href="lab.css" />
@@ -14,7 +14,7 @@
 <h1>An Introduction to Oracle Solaris 11</h1> 
 
 <h3><em>Author: Pavel Anni, Oracle</em></h3>
-<h4><em>pavel.anni@oracle.com</em></h4><h4><em>September 2012</em></h4>
+<h4><em>pavel.anni@oracle.com</em></h4><h4><em>November 2012</em></h4>
 <h2>Lab Introduction </h2><p>In this lab we introduce the most interesting features of Solaris 11, based on real life use cases. We will: </p><ul>
 <li>create a pool and a file system with ZFS; expand it; snapshot and clone it; use ZFS compression and deduplication; </li>
 <li>create a new boot environment as a backup, make our current system unbootable because of some fatal mistakes, reboot the system using backup BE;</li>
@@ -48,7 +48,7 @@ this shouldn't interfere with your outside network environment. </p>
 
 <p>If you are using OSC virtual machines, you will be provided with IP addresses to use in this lab.</p><p>You should login into Solaris desktop with the following credentials: </p>
 <p>Username: <code><strong>lab</strong></code> Password: <code><strong>oracle1</strong></code> </p><p>After logging in, open a terminal window and assume the root role: </p><pre>lab@solaris:~$ <strong>su root</strong> </pre>
-<p>Password for root is: <code><strong>oracle2011</strong></code>. Don't use the dash "-" in this command: 
+<p>Password for root is: <code><strong>solaris1</strong></code>. Don't use the dash "-" in this command: 
 we are going to keep the user <code>lab</code>'s environment settings </p><p>Note: we don't recommend to log in as <code>root</code>. In Solaris 11 it is prohibited by default; 
 <code>root</code> is only a role, not a login name.</p>
 

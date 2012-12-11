@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <title>Oracle Solaris 11 Boot Environments Lab</title>
-<meta name="generator" content="Bluefish 2.0.2" >
-<meta name="author" content="Lab User" >
-<meta name="date" content="2012-09-05T14:44:14-0400" >
+<meta name="generator" content="Bluefish 2.2.3" >
+<meta name="author" content="Pavel Anni" >
+<meta name="date" content="2012-11-28T16:20:52-0500" >
 <meta name="copyright" content="Oracle Corporation, 2011-2012">
 <link type="text/css" rel="stylesheet" href="lab.css" />
 </head>
@@ -55,7 +55,8 @@ root@solaris:~# <kbd>rm -rf /etc/</kbd>
 
 <p>What??? You just have destroyed the whole /etc directory! All the configuration files are gone! (If you are brave enough, 
 you can remove /usr/bin too!) You have killed your system! Try to "Power Off" your virtual machine and reboot it--you'll see
- it won't boot. Don't wait too long, 3-5 minutes is enough to be sure that it doesn't boot. Hint: While waiting for the system to reboot, press the [ESC] key to see the error messages.</p>
+ it won't boot. Don't wait too long, 3-5 minutes is enough to be sure that it doesn't boot. 
+ Hint: While waiting for the system to reboot, press the [ESC] key to see the error messages.</p>
 
 <p>
 No worries! We have a backup! And you don't have to go and find the backup tape in your fireproof cabinet, go through all the 
@@ -64,9 +65,46 @@ instead of the "Oracle Solaris 11 11/11" which is the default. </p>
 
 <p>It boots again! What a relief!</p>
 
+<p>What now? List your boot environments again:</p>
+
+<pre>
+root@solaris:~# <kbd>beadm list</kbd>
+BE          Active Mountpoint Space   Policy Created          
+--          ------ ---------- -----   ------ -------          
+solaris        R    /          7.13G  static 2011-11-14 13:13 
+solaris-backup N      -        126.14M  static 2011-11-15 11:09 
+</pre>
+
+<p>What does it mean? It means that you are now running 'solaris-backup' boot environment,
+but at the next reboot the system will try to boot the 'solaris' boot environment,
+ which is corrupted. Let's fix that. The plan is: activate your current BE, delete the 'solaris' BE (as it's
+ corrupted anyway), create a new 'solaris' BE and activate it.</p>
+ 
+<pre>
+root@solaris:~# <kbd>beadm activate solaris-backup</kbd>
+root@solaris:~# <kbd>beadm destroy solaris</kbd>
+root@solaris:~# <kbd>beadm create solaris</kbd>
+root@solaris:~# <kbd>beadm activate solaris</kbd>
+</pre>
+
+<p>Check your work:</p>
+
+<pre>
+root@solaris:~# <kbd>beadm list</kbd>
+BE             Active Mountpoint Space  Policy Created          
+--             ------ ---------- -----  ------ -------          
+solaris        R      -          6.05G  static 2012-11-14 16:35 
+solaris-backup N      /          275.5K static 2012-11-14 16:22 
+
+</pre>
+
+<p>Now you've got everything back. You can safely reboot into 'solaris' BE or 
+you can continue working in 'solaris-backup' until next reboot.</p>
+
 <p>Boot Environments have many applications: you can update your system, 
 installing packages into inactive boot environment; create boot environment snapshots etc. We leave it
 for your homework. </p>
+
 
 <p><a href="#top">Back to top</a></p>
 

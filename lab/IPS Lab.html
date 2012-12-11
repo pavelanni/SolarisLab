@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <title>Oracle Solaris 11 IPS Lab</title>
-<meta name="generator" content="Bluefish 2.0.2" >
-<meta name="author" content="Lab User" >
-<meta name="date" content="2012-07-27T17:56:51-0400" >
+<meta name="generator" content="Bluefish 2.2.3" >
+<meta name="author" content="Pavel Anni" >
+<meta name="date" content="2012-11-20T15:24:51-0500" >
 <meta name="copyright" content="Oracle Corporation, 2011-2012">
 <link type="text/css" rel="stylesheet" href="lab.css" />
 </head>
@@ -13,6 +13,62 @@
 <h1>Oracle Solaris 11 IPS Lab</h1>
 
 <p>One of the main new features in Solaris 11 is a new packaging system, called IPS (Image Packaging System). In this lab we will explore its capabilities and learn how to work with packages from System Administrator's perspecitve.</p>
+
+<h2><a id="P.0">Exercise P.0: IPS Repository</a></h2>
+
+<p>To work with IPS we should use one of available repositories. If in your lab environment you have Internet 
+access then we will use the default Oracle Solaris repository. If network is not available, we will have to create 
+and use our local repository. This also could be used as an exercise of creating local IPS repositories 
+for the situation when your Solaris servers are located behind firewall.</p>
+
+<p>First, check if you can reach Oracle's web site:</p>
+
+<pre>root@solaris:~# <kbd>ping oracle.com</kbd></pre>
+
+<p>If you get '<code>oracle.com is alive</code>' answer then you can use Oracle's online repository. If not, or if you want to learn how
+ to create your own local repository, then bear with us. It looks complicated, but if you follow all the steps 
+ carefully, you are going to get it right.</p>
+ 
+<p>1. We have created a small repository which contains all packages that are necessary to install zones plus
+several others we are going to use in the lab. You can get the '<code>minrepo.iso</code>' file from your lab instructor 
+(on a USB stick or DVD). Copy this file onto your host machine.  </p>
+
+<p>2. Make sure that DVD drive is enabled in your VM. If it's not, enable it. In short: stop your VM, go to the 
+Storage part of the VM's settings, add DVD and use the minrepo.iso file as a virtual DVD image. Please see the 
+screenshots below. </p>
+
+<p>Where to find the Storage part of VM settings:</p>
+<img src="img/vbox-manager-storage.png" alt="VBox Manager" width="500" />
+
+<p>How to add DVD:</p>
+<img src="img/add-dvd.png" alt="Add DVD" width="500" />
+
+<p>How to choose the ISO file:</p>
+<img src="img/choose-disk.png" alt="Choose ISO" />
+
+<p>Finally it should look like this:</p>
+<img src="img/vbox-mgr-with-dvd.png" alt="VBox Manager with DVD" width="500" />
+
+<p>3. Boot your Oracle Solaris 11.1 VM, login into it, open a Terminal and assume a root 
+role using '<code>su -</code>'.</p>
+
+<p>4. Create a ZFS file system for repository, copy the repository from the virtual DVD, configure and enable 
+the repository service.</p>
+
+<pre>
+root@solaris:~# <kbd>zfs create -o mountpoint=/repo rpool/repo</kbd>
+root@solaris:~# <kbd>rsync -a /media/SOL11_MINREPO/ /repo/</kbd>
+root@solaris:~# <kbd>pkgrepo -s /repo refresh</kbd>
+root@solaris:~# <kbd>svccfg -s application/pkg/server setprop pkg/inst_root=/repo</kbd>
+root@solaris:~# <kbd>svcprop -p pkg/inst_root application/pkg/server</kbd>
+root@solaris:~# <kbd>svcadm refresh application/pkg/server</kbd>
+root@solaris:~# <kbd>svcadm enable application/pkg/server</kbd>
+root@solaris:~# <kbd>svcs pkg/server</kbd>
+root@solaris:~# <kbd>pkg set-publisher -G '*' -M '*' -g http://10.0.2.15/ solaris</kbd>
+
+</pre>
+
+<p>Now you are ready to work with our mini-repository.</p>
 
 <h2><a id="P.1">Exercise P.1: IPS Basics</a></h2>
 

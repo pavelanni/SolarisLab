@@ -1,0 +1,7 @@
+create
+set zonepath=/zones/web2
+add capped-cpu
+set ncpus=1
+end
+exit
+

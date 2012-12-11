@@ -1,0 +1,109 @@
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+<service_bundle type="profile" name="sysconfig">
+  <service version="1" type="service" name="system/config-user">
+    <instance enabled="true" name="default">
+      <property_group type="application" name="root_account">
+        <propval type="astring" name="login" value="root"/>
+        <propval type="astring" name="password" value="$5$yoj0PCWm$jWVLPE98MO9eNfrWYHEjyTQvZQ/A4rBgesicRJ4o064"/>
+        <propval type="astring" name="type" value="role"/>
+      </property_group>
+      <property_group type="application" name="user_account">
+        <propval type="astring" name="login" value="zuser"/>
+        <propval type="astring" name="password" value="$5$zw8gpkFJ$8ftz1If8AMBkqDXicFSF9VyVpw6KgwR1Uojcepe4Ah3"/>
+        <propval type="astring" name="type" value="normal"/>
+        <propval type="astring" name="description" value="Zone User"/>
+        <propval type="count" name="gid" value="10"/>
+        <propval type="astring" name="shell" value="/usr/bin/bash"/>
+        <propval type="astring" name="roles" value="root"/>
+        <propval type="astring" name="profiles" value="System Administrator"/>
+        <propval type="astring" name="sudoers" value="ALL=(ALL) ALL"/>
+      </property_group>
+    </instance>
+  </service>
+  <service version="1" type="service" name="system/timezone">
+    <instance enabled="true" name="default">
+      <property_group type="application" name="timezone">
+        <propval type="astring" name="localtime" value="US/Eastern"/>
+      </property_group>
+    </instance>
+  </service>
+  <service version="1" type="service" name="system/environment">
+    <instance enabled="true" name="init">
+      <property_group type="application" name="environment">
+        <propval type="astring" name="LANG" value="en_US.UTF-8"/>
+      </property_group>
+    </instance>
+  </service>
+  <service version="1" type="service" name="system/identity">
+    <instance enabled="true" name="node">
+      <property_group type="application" name="config">
+        <propval type="astring" name="nodename" value="web-template"/>
+      </property_group>
+    </instance>
+  </service>
+  <service version="1" type="service" name="system/keymap">
+    <instance enabled="true" name="default">
+      <property_group type="system" name="keymap">
+        <propval type="astring" name="layout" value="US-English"/>
+      </property_group>
+    </instance>
+  </service>
+  <service version="1" type="service" name="system/console-login">
+    <instance enabled="true" name="default">
+      <property_group type="application" name="ttymon">
+        <propval type="astring" name="terminal_type" value="vt100"/>
+      </property_group>
+    </instance>
+  </service>
+  <service version="1" type="service" name="network/physical">
+    <instance enabled="true" name="default">
+      <property_group type="application" name="netcfg">
+        <propval type="astring" name="active_ncp" value="DefaultFixed"/>
+      </property_group>
+    </instance>
+  </service>
+  <service version="1" type="service" name="network/install">
+    <instance enabled="true" name="default">
+      <property_group type="application" name="install_ipv4_interface">
+        <propval type="astring" name="address_type" value="static"/>
+        <propval type="net_address_v4" name="static_address" value="10.140.204.170/23"/>
+        <propval type="astring" name="name" value="net0/v4"/>
+        <propval type="net_address_v4" name="default_route" value="10.140.204.1"/>
+      </property_group>
+      <property_group type="application" name="install_ipv6_interface">
+        <propval type="astring" name="stateful" value="yes"/>
+        <propval type="astring" name="stateless" value="yes"/>
+        <propval type="astring" name="address_type" value="addrconf"/>
+        <propval type="astring" name="name" value="net0/v6"/>
+      </property_group>
+    </instance>
+  </service>
+  <service version="1" type="service" name="system/name-service/switch">
+    <property_group type="application" name="config">
+      <propval type="astring" name="default" value="files"/>
+      <propval type="astring" name="host" value="files dns"/>
+      <propval type="astring" name="printer" value="user files"/>
+    </property_group>
+    <instance enabled="true" name="default"/>
+  </service>
+  <service version="1" type="service" name="system/name-service/cache">
+    <instance enabled="true" name="default"/>
+  </service>
+  <service version="1" type="service" name="network/dns/client">
+    <property_group type="application" name="config">
+      <property type="net_address" name="nameserver">
+        <net_address_list>
+          <value_node value="192.135.82.132"/>
+          <value_node value="130.35.249.52"/>
+          <value_node value="130.35.249.41"/>
+        </net_address_list>
+      </property>
+      <property type="astring" name="search">
+        <astring_list>
+          <value_node value="us.oracle.com"/>
+        </astring_list>
+      </property>
+    </property_group>
+    <instance enabled="true" name="default"/>
+  </service>
+</service_bundle>
